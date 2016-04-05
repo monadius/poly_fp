@@ -14,6 +14,8 @@ expr2 = (x * y - '2.1') * ('0.1' + x)
 # Here is the correct version:
 expr3 = ('1.1' + mk_const_expr('1')) * x
 
+expr4 = x + '0.1' * y
+
 analyze_float(expr1)
 analyze_fixed(expr1)
 
@@ -31,3 +33,11 @@ analyze_fixed(expr2)
 set_real_vars_flag(True)
 
 analyze_float(expr1)
+
+# Return back to default values of global variables
+set_real_vars_flag(False)
+set_eps_name('eps')
+set_delta_name('delta')
+set_abs_template('|{0}|')
+
+analyze_float(expr4)
