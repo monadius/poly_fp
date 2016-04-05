@@ -35,12 +35,11 @@ Output example:
 The constants `eps` and `delta` represent maximum relative and absolute errors of the standard floating-point rounding model: `rnd(t) = t * (1 + e) + d`.
 
 Values of these constants can be defined as follows.
-| Precision (rounding)| eps      | delta     |
-|---------------------|----------|-----------|
-| single (nearest)    | 2^(-24)  | 2^(-150)  |
-| double (nearest)    | 2^(-53)  | 2^(-1075) |
-| single (directed)   | 2^(-23)  | 2^(-149)  |
-| double (directed)   | 2^(-52)  | 2^(-1074) |
+
+- single precision (nearest): `eps = 2^(-24)`, `delta = 2^(-150)`
+- double precision (nearest): `eps = 2^(-53)`, `delta = 2^(-1075)`
+- single precision (directed): `eps = 2^(-23)`, `delta = 2^(-149)`
+- double precision (directed): `eps = 2^(-52)`, `delta = 2^(-1074)`
 
 The output format of the fixed-precision analysis is similar but it does not include relative errors. The rounding model is defined by `rnd(t) = t + d` where the value of `d` depends on a chosen 
 fixed-precision format. 
@@ -50,7 +49,7 @@ fixed-precision format.
 
 It is assumed that all operations are performed with the same floating-point (or fixed-point) precision without overflows.
 
-Constants which can be represented exactly by floating-point (fixed-point) numbers introduce round-off errors. This may be improved in future. Also, all constants are rounded as `rnd(c) = c * (1 + e)`. That is, we ignore subnormal constant (which are very rare).
+Constants which can be represented exactly by floating-point (fixed-point) numbers introduce round-off errors. This may be improved in future. Also, all constants are rounded as `rnd(c) = c * (1 + e)`. That is, we ignore subnormal constants (which are very rare).
 
 
 ## Main idea
@@ -61,15 +60,15 @@ The main idea of the program can be explained with a simple example. Suppose we 
 
 and we want to estimate the round-off error of its floating-point implementation (for example, using single precision arithmetic). We can write
     
-    float(p(x, y)) = float(x + 0.1 * y) = rnd(x + rnd(rnd(0.1) * y))
+    float(p(x, y)) = float(x + 0.1 * y) = rnd(x + rnd(rnd(0.1) * y)).
 
 Here we assume that x and y are floating-point variables and we do not round their values. We apply the standard rounding model (with different error terms for different rounding operators) and get
 
-    rnd(x + rnd(rnd(0.1) * y)) = (x + [0.1 * (1 + e1) + d1] * y * (1 + e2) + d2) * (1 + e3) + d3
+    rnd(x + rnd(rnd(0.1) * y)) = (x + [0.1 * (1 + e1) + d1] * y * (1 + e2) + d2) * (1 + e3) + d3.
 
-Here we can assume that `d1 = 0` (because `0.1` is a constant which can be rounded to a normal floating-point number; in fact, in our implementation we assume that all constants are rounded to normal floating-point numbers). We can also say that `d3 = 0` because addition and subtraction operations are always exact in the subnormal range. Finally, we get
+We can assume that `d1 = 0` (because `0.1` is a constant which can be rounded to a normal floating-point number; in fact, in our implementation we assume that all constants are rounded to normal floating-point numbers). We can also say that `d3 = 0` because addition and subtraction operations are always exact in the subnormal range. Finally, we get
 
-    float(p(x, y)) = x * (1 + e3) + 0.1 * y * (1 + e1) * (1 + e2) * (1 + e3) + d2 * (1 + e3)
+    float(p(x, y)) = x * (1 + e3) + 0.1 * y * (1 + e1) * (1 + e2) * (1 + e3) + d2 * (1 + e3).
 
 We can write
 
@@ -77,7 +76,7 @@ We can write
 
 where `err_abs` contains terms with variables `d` and `err_rel` contains all remaining terms. There several ways to estimate the computed round-off errors. A simple estimate is the following:
 
-    |(1 + e1)(1 + e2)(1 + e3) - 1| <= (1 + eps)^3 - 1 <= 3*eps / (1 - 3*eps)
+    |(1 + e1)(1 + e2)(1 + e3) - 1| <= (1 + eps)^3 - 1 <= 3*eps / (1 - 3*eps).
 
 Our program yields the following output for this example:
 
