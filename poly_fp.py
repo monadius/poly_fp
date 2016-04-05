@@ -26,6 +26,31 @@ eps_name = "eps"
 # A name of the absolute error bound.
 delta_name = "delta"
 
+def set_verbose_flag(flag):
+	assert(type(flag) is bool)	
+	global verbose_flag
+	verbose_flag = flag
+
+def set_real_vars_flag(flag):
+	assert(type(flag) is bool)
+	global real_vars_flag
+	real_vars_flag = flag
+
+def set_abs_template(s):
+	assert(isinstance(s, basestring))
+	global abs_template
+	abs_template = s
+
+def set_eps_name(name):
+	assert(isinstance(name, basestring))
+	global eps_name
+	eps_name = name
+
+def set_delta_name(name):
+	assert(isinstance(name, basestring))
+	global delta_name
+	delta_name = name
+
 class Variable:
 	"""Defines a variable """
 
@@ -174,6 +199,16 @@ class ConstExpr(Expr):
 			return "ConstExpr({0})".format(self.const)
 		else:
 			return str(self.const)
+
+def mk_var_expr(name):
+	"""Creates a VarExpr from a given name"""
+	var = Variable(name)
+	return VarExpr(var)
+
+def mk_const_expr(c):
+	"""Creates a ConstExpr from a given constant (string or number)"""
+	const = Constant(c)
+	return ConstExpr(const)
 
 class ErrorTerm:
 	"""Represents an error term.
@@ -465,6 +500,25 @@ def combine_rel_error(poly_rel_err):
 		err.append(k)
 	return (err, max_n)
 
+def get_lin_rel_error(poly):
+	"""Returns a linear part of the relative error.
+
+	This function combines monomials corresponding to the same error terms together.
+	The result of this function is a list of polynomials: [[Monomial]].
+	"""
+	result = {}
+	r = get_rel_part(poly)
+	for m in r:
+		k = Monomial()
+		k.c = m.c
+		k.vars = m.vars
+		for e in m.rel_errs:
+			if e in result:
+				result[e].append(k.copy())
+			else:
+				result[e] = [k.copy()]
+	return result.values()
+
 def get_abs_error_bound(poly):
 	"""Returns a simple absolute error bound of a polynomial.
 
@@ -540,6 +594,9 @@ def analyze_float(expr):
 	fp = float_poly(expr)
 	err0_rel = get_rel_error_bound(fp)
 	err0_rel_combined, max_rel_n = combine_rel_error(err0_rel)
+	err1_rel = get_lin_rel_error(fp)
+	err2_rel = [(m, n) for (m, n) in err0_rel if n >= 2]
+	err2_rel2 = [(m, n * n) for (m, n) in err2_rel]
 
 	err_abs = get_abs_error_bound(fp)
 	err1_abs, max_abs1_n, err2_abs, max_abs2_n = combine_abs_error(err_abs)
@@ -559,8 +616,16 @@ def analyze_float(expr):
 			s += template1.format(n)
 		err_abs_strs.append(s)
 
-	err_abs_str = " + ".join(err_abs_strs)
+	if err_abs_strs:
+		err_abs_str = " + ".join(err_abs_strs)
+	else:
+		err_abs_str = "0"
 	err12_abs_str = poly_to_str_abs(err1_abs + err2_abs)
+
+	err1_rel_strs = [abs_template.format(poly_to_str(p)) for p in err1_rel]
+	err2_rel_str = poly_err_to_str(err2_rel,
+		"((1 + e)^{0} - 1 - {0}*e)".replace("e", eps_name))
+	err2_rel_str_combined = poly_to_str_abs(combine_rel_error(err2_rel2)[0])
 
 	print("float({0}) = v0 + error".format(expr))
 	print("v0 = {0}\n".format(v0_str))
@@ -573,39 +638,60 @@ def analyze_float(expr):
 		.format(err0_rel_combined_str, max_rel_n))
 
 	print("|err_abs| <= {0}".format(err_abs_str))
-	print("|err_abs| <= ({0}) * (1 + eps)^{1} * delta"
+	print("|err_abs| <= ({0}) * (1 + eps)^{1} * delta\n"
 		.replace("eps", eps_name)
 		.replace("delta", delta_name)
 		.format(err12_abs_str, max(max_abs1_n, max_abs2_n)))
 
+	if err1_rel:
+		print("err_rel = err_rel1 + err_rel2\n")
+
+		print("|err_rel1| <= ({0}) * eps"
+			.replace("eps", eps_name)
+			.format(" + ".join(err1_rel_strs)))
+
+		print("|err_rel2| <= {0}".format(err2_rel_str))
+		print("|err_rel2| <= ({0}) * eps^2 / (1 - {1}*eps)\n"
+			.replace("eps", eps_name)
+			.format(err2_rel_str_combined, max_rel_n))
+
+def analyze_fixed(expr):
+	"""Analyzes a given expression and prints out all fixed-point error bounds"""
+	fx = fixed_poly(expr)
+
+	err_abs = get_abs_error_bound(fx)
+	err1_abs, max_abs1_n, err2_abs, max_abs2_n = combine_abs_error(err_abs)
+	
+	v0_str = poly_to_str(get_real_part(fx))
+	
+	template0 = " * d^{0}".replace("d", delta_name)
+	err_abs_strs = []
+	for (m, k, n) in err_abs:
+		assert(n == 0)
+		s = abs_template.format(m) + template0.format(k)
+		err_abs_strs.append(s)
+
+	if err_abs_strs:
+		err_abs_str = " + ".join(err_abs_strs)
+	else:
+		err_abs_str = "0"
+
+	err1_abs_str = poly_to_str_abs(err1_abs)
+	err2_abs_str = poly_to_str_abs(err2_abs)
+
+	print("fixed({0}) = v0 + error".format(expr))
+	print("v0 = {0}\n".format(v0_str))
+	
+	print("|error| <= {0}\n".format(err_abs_str))
+
+	print("error = error1 + error2\n")
+
+	print("|error1| <= ({0}) * delta"
+		.replace("delta", delta_name)
+		.format(err1_abs_str))
+
+	print("|error2| <= ({0}) * delta^2\n"
+		.replace("delta", delta_name)
+		.format(err2_abs_str))
 
 
-
-
-################### Tests ######################
-def mk_var(name):
-	var = Variable(name)
-	return VarExpr(var)
-
-x = mk_var("x")
-y = mk_var("y")
-
-t = 1 - (3 * (2 - (x + '1.2' - Variable("y"))) * 5 - '3.5')
-t1 = (x - ('1.1' * x - y)) * ('1.1' * x + y)
-t2 = ('1.5'*('1.2'*x) + '1.1'*y + '1.2')*'0.7'
-
-#fp = float_poly(t2)
-#print(fp)
-#print(get_real_part(fp))
-#print(get_rel_part(fp))
-#print(get_abs_part(fp))
-#print(get_rel_error_bound(fp))
-
-#abs_template = "abs({0})"
-eps_name = "e"
-delta_name = "d"
-#real_vars_flag = True
-
-analyze_float(t2)
-print("")
-analyze_float(t1)
