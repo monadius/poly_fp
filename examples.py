@@ -41,3 +41,8 @@ set_delta_name('delta')
 set_abs_template('|{0}|')
 
 analyze_float(expr4)
+
+z = mk_var_expr("z")
+expr5 = (x + y) * z
+
+analyze_float(expr5)
