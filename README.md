@@ -1,8 +1,6 @@
 # poly_fp
 Symbolic round-off errors (floating-point and fixed-point) for general polynomial expressions.
 
-Developed and tested with Python 2.7.5.
-
 See [examples.py](examples.py) for usage examples. 
 See also the [source code](poly_fp.py) for additional comments.
 

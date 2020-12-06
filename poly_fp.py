@@ -40,19 +40,19 @@ def set_real_vars_flag(flag):
 
 
 def set_abs_template(s):
-    assert(isinstance(s, basestring))
+    assert(isinstance(s, str))
     global abs_template
     abs_template = s
 
 
 def set_eps_name(name):
-    assert(isinstance(name, basestring))
+    assert(isinstance(name, str))
     global eps_name
     eps_name = name
 
 
 def set_delta_name(name):
-    assert(isinstance(name, basestring))
+    assert(isinstance(name, str))
     global delta_name
     delta_name = name
 
@@ -63,7 +63,7 @@ class Variable:
     name = None
 
     def __init__(self, name):
-        assert(isinstance(name, basestring))
+        assert(isinstance(name, str))
         self.name = name
 
     def __repr__(self):
@@ -82,7 +82,7 @@ class Constant:
     value = None
 
     def __init__(self, val):
-        if isinstance(val, basestring) or isinstance(val, Rational):
+        if isinstance(val, str) or isinstance(val, Rational):
             self.value = Fraction(val)
         else:
             raise TypeError("argument should be a string "
@@ -105,11 +105,11 @@ def convert_to_expr(val):
         return ConstExpr(val)
     elif isinstance(val, Variable):
         return VarExpr(val)
-    elif isinstance(val, basestring) or isinstance(val, Rational):
+    elif isinstance(val, str) or isinstance(val, Rational):
         return ConstExpr(Constant(val))
     else:
         raise TypeError("argument should be an instance of: "
-                        "Expr, Constant, Variable, basestring, Rational")
+                        "Expr, Constant, Variable, str, Rational")
 
 
 class Expr:
